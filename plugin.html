@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .row {
+      display: flex;
+    }
+
+    .row>div {
+      width: 250px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container" id="container">
+  </div>
+
+  <script src="./MetaflowPluginAPI.js"></script>
+  <script src="https://unpkg.com/squirrelly@8.0.8/dist/browser/squirrelly.min.js"></script>
+  <script>
+    (function () {
+      const Templates = {}
+      Metaflow.heightCheck()
+      Metaflow.register('task-details');
+      Metaflow.requestData('task', ({ data }) => {
+        const templates = Array.isArray(data.metadata) ? data.metadata.filter(metadata => {
+          console.log(metadata.type)
+          return metadata.type.startsWith('template')
+        }) : []
+        if (templates.length === 0) {
+          console.log("No templates")
+        }
+        for (const template of templates) {
+          const templatename = template.type.split(":")[1];
+          const templatevalues = JSON.parse(template.value)
+
+          if (typeof templatevalues !== "object") {
+            return
+          }
+
+          fetch(`templates/${templatename}.html`, {
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'text/html',
+              'accept': 'text/html',
+            }
+          })
+            .then(response => response.text())
+            .then(d => {
+              if (Templates[templatename]) {
+                document.getElementById(templatename).innerHTML = Sqrl.render(d, templatevalues)
+              } else {
+                const newDiv = document.createElement("div")
+                newDiv.id = templatename
+                newDiv.innerHTML = Sqrl.render(d, templatevalues)
+                document.getElementById("container").appendChild(newDiv)
+              }
+              Templates[templatename] = d
+              Metaflow.heightCheck()
+            })
+            .catch(e => console.log(e))
+        }
+
+      })
+    })();
+  </script>
+</body>
+
+</html>
