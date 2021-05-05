@@ -1,7 +1,23 @@
 // fn
 const Listeners = [];
-// [name, fn][]
-const ResourceListeners = [];
+let onReadyFn = () => null
+
+function messageHandler(event) {
+  if (event.data && event.data.type) {
+    switch (event.data.type) {
+      case 'ReadyToRender': {
+        onReadyFn();
+        return;
+      }
+      case 'DataUpdate': {
+        for (const listener of Listeners) {
+          listener(event.data)
+        }
+        return;
+      }
+    }
+  }
+}
 
 const Metaflow = {
   heightCheck() {
@@ -12,45 +28,27 @@ const Metaflow = {
   register(slot) {
     window.parent.postMessage({ name: window.name, type: 'PluginRegisterEvent', slot: slot }, '*')
   },
-  requestData(type, fn) {
+  onReady(fn) {
+    onReadyFn = fn;
+  },
+  requestPageData(fn) {
     Listeners.push(fn)
-    window.parent.postMessage({ name: window.name, type: 'PluginSubscribeToData', dataType: type }, '*')
-  },
-  requestResource(name, fn) {
-    ResourceListeners.push([name, fn])
-    window.parent.postMessage({ name: window.name, type: 'PluginResourceRequest', name: name }, '*')
-  },
-  PageData: {
-    Run: {},
-    Task: {},
+    window.parent.postMessage({ name: window.name, type: 'PluginSubscribeToData' }, '*')
   },
   service: {
     uiVersion: '',
     serviceVersion: '',
     apiUrl: '',
-  }
+  },
+  init() {
+    window.addEventListener('message', messageHandler);
+  },
+  remove(fn) {
+    window.parent.postMessage({ name: window.name, type: 'PluginRemoveRequest' }, '*')
+  },
 }
 
-window.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'DataUpdate') {
-    if (event.data.data.run) {
-      Metaflow.PageData.Run = event.data.data.run
-    }
-    if (event.data.data.task) {
-      Metaflow.PageData.Task = event.data.data.task
-    }
 
-    for (const listener of Listeners) {
-      listener(event.data)
-    }
-  } else if (event.data && event.data.type === 'ResourceUpdate') {
-    const listeners = ResourceListeners.filter(([ name, fn ]) => name === event.data.name)
-    ResourceListeners = ResourceListeners.filter(([ name, fn ]) => name !== event.data.name)
-    for (const listener of listeners) {
-      listener(event.data)
-    }
-  }
-})
 
 
 window.Metaflow = Metaflow;

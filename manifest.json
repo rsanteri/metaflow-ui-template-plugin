@@ -1,5 +1,10 @@
 {
-  "name": "metaflow-ui-template-plugin",
+  "name": "Template plugin",
   "version": "0.0.1",
-  "entrypoint": "plugin.html"
+  "entrypoint": "plugin.html",
+  "files": [
+    "plugin.html",
+    "MetaflowPluginAPI.js",
+    "templates/*"
+  ]
 }
